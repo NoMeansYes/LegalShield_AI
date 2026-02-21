@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LegalShield AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green: #00ff88;
+      --red: #ff4455;
+      --orange: #ff9500;
+      --blue: #00aaff;
+      --bg: #080c10;
+      --card: #0d1520;
+      --border: #1a2d42;
+      --text: #c8ddf0;
+      --muted: #4a6a88;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0d1520, #0a1a10);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-logo { font-size: 2em; }
+
+    .header-text h1 {
+      font-size: 1.5em;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .header-text h1 span { color: var(--green); }
+
+    .header-text p {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .badge {
+      margin-left: auto;
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.2);
+      color: var(--green);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65em;
+      padding: 6px 14px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* UPLOAD SECTION */
+    .upload-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone {
+      border: 2px dashed #1a3a5a;
+      border-radius: 10px;
+      padding: 50px 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 24px;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--green);
+      background: rgba(0,255,136,0.03);
+    }
+
+    .upload-zone input { display: none; }
+
+    .upload-icon { font-size: 2.5em; margin-bottom: 12px; }
+
+    .upload-zone h2 {
+      font-size: 1.2em;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone p {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75em;
+      color: var(--muted);
+    }
+
+    .file-selected {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,255,136,0.06);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8em;
+      color: var(--green);
+    }
+
+    .btn-analyze {
+      background: var(--green);
+      color: #080c10;
+      border: none;
+      padding: 16px 40px;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1em;
+      font-weight: 800;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+
+    .btn-analyze:hover { background: #00cc6a; transform: translateY(-1px); }
+    .btn-analyze:disabled { background: #1a3a2a; color: #2a5a3a; cursor: not-allowed; transform: none; }
+
+    /* PROGRESS */
+    .progress-section {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .progress-title {
+      font-size: 1em;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      background: #0d1a10;
+      border-radius: 10px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      background: linear-gradient(90deg, var(--green), #00aaff);
+      height: 100%;
+      width: 0%;
+      transition: width 0.6s ease;
+      border-radius: 10px;
+    }
+
+    .progress-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .progress-step {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65em;
+      color: var(--muted);
+      text-align: center;
+      flex: 1;
+      transition: color 0.3s;
+    }
+
+    .progress-step.active { color: var(--green); }
+    .progress-step.done { color: #2a5a3a; }
+
+    /* RESULTS */
+    .results-section { display: none; }
+
+    /* VERDICT CARD */
+    .verdict-card {
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .verdict-high { background: #1a0a0c; border: 1px solid rgba(255,68,85,0.3); }
+    .verdict-medium { background: #1a1508; border: 1px solid rgba(255,149,0,0.3); }
+    .verdict-low { background: #0a1a0c; border: 1px solid rgba(0,255,136,0.3); }
+
+    .verdict-left h2 { font-size: 1.1em; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .verdict-left p { font-size: 0.88em; color: var(--text); line-height: 1.6; }
+
+    .verdict-sign {
+      margin-top: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75em;
+      padding: 6px 14px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .sign-yes { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+    .sign-no { background: rgba(255,68,85,0.1); color: var(--red); border: 1px solid rgba(255,68,85,0.2); }
+
+    .risk-circle {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .risk-circle-high { background: rgba(255,68,85,0.1); border: 2px solid var(--red); }
+    .risk-circle-medium { background: rgba(255,149,0,0.1); border: 2px solid var(--orange); }
+    .risk-circle-low { background: rgba(0,255,136,0.1); border: 2px solid var(--green); }
+
+    .risk-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.8em;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .risk-num-high { color: var(--red); }
+    .risk-num-medium { color: var(--orange); }
+    .risk-num-low { color: var(--green); }
+
+    .risk-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.55em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* SUMMARY GRID */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .summary-card h3 {
+      font-size: 0.85em;
+      font-weight: 800;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-card h3.danger { color: var(--red); }
+    .summary-card h3.negotiate { color: var(--orange); }
+    .summary-card h3.illegal { color: var(--red); }
+
+    .summary-point {
+      font-size: 0.82em;
+      color: var(--text);
+      line-height: 1.5;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    .summary-point:last-child { border-bottom: none; }
+    .summary-point::before { content: "→"; color: var(--orange); flex-shrink: 0; }
+
+    /* CLAUSES */
+    .clauses-header {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7em;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      margin-top: 8px;
+    }
+
+    .clause-card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 12px;
+      border-left: 3px solid var(--border);
+      transition: transform 0.2s;
+    }
+
+    .clause-card:hover { transform: translateX(3px); }
+    .clause-card.flagged { border-left-color: var(--red); }
+    .clause-card.safe { border-left-color: var(--green); }
+
+    .clause-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .clause-type {
+      font-weight: 800;
+      font-size: 0.95em;
+      color: #fff;
+    }
+
+    .score-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7em;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+
+    .score-high { background: rgba(255,68,85,0.15); color: var(--red); border: 1px solid rgba(255,68,85,0.3); }
+    .score-medium { background: rgba(255,149,0,0.15); color: var(--orange); border: 1px solid rgba(255,149,0,0.3); }
+    .score-low { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+
+    .flag-tags { margin-bottom: 10px; }
+
+    .flag-tag {
+      display: inline-block;
+      background: rgba(255,68,85,0.1);
+      color: var(--red);
+      border: 1px solid rgba(255,68,85,0.2);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65em;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65em;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+
+    .plain-english {
+      font-size: 0.85em;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .redline {
+      background: #0a1a0a;
+      border: 1px solid rgba(0,255,136,0.15);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75em;
+      color: #6aff9a;
+      line-height: 1.6;
+    }
+
+    .citation {
+      display: inline-block;
+      background: rgba(0,170,255,0.08);
+      border: 1px solid rgba(0,170,255,0.2);
+      color: var(--blue);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65em;
+      padding: 3px 10px;
+      border-radius: 3px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    /* STATS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.6em;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .stat-label {
+      font-size: 0.72em;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .error-box {
+      background: rgba(255,68,85,0.08);
+      border: 1px solid rgba(255,68,85,0.3);
+      border-radius: 8px;
+      padding: 20px;
+      color: var(--red);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8em;
+      margin-top: 16px;
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .verdict-card { flex-direction: column; text-align: center; }
+      .header { padding: 16px 20px; }
+      .badge { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">⚖️</div>
+  <div class="header-text">
+    <h1>Legal<span>Shield</span> AI</h1>
+    <p>// AI-powered contract red-flagging for Indian legal documents</p>
+  </div>
+  <div class="badge">HACKATHON BUILD</div>
+</div>
+
+<div class="container">
+
+  <!-- UPLOAD -->
+  <div class="upload-section">
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📄</div>
+      <h2>Upload Your Legal Document</h2>
+      <p>Drag & drop or click to upload</p>
+      <p style="margin-top:6px;">Supports: PDF, TXT &nbsp;|&nbsp; Rental agreements, Employment contracts, Loan documents, NDAs</p>
+      <input type="file" id="fileInput" accept=".pdf,.txt" onchange="handleFile(this)">
+    </div>
+
+    <div class="file-selected" id="fileSelected">
+      <span>✓</span>
+      <span id="fileNameDisplay"></span>
+    </div>
+
+    <button class="btn-analyze" id="analyzeBtn" onclick="analyzeDocument()" disabled>
+      🔍 ANALYZE DOCUMENT
+    </button>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section" id="progressSection">
+    <div class="progress-title">🤖 AI Agent is analyzing your document...</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-steps">
+      <div class="progress-step" id="step1">① Uploading</div>
+      <div class="progress-step" id="step2">② Extracting Text</div>
+      <div class="progress-step" id="step3">③ Splitting Clauses</div>
+      <div class="progress-step" id="step4">④ AI Analyzing</div>
+      <div class="progress-step" id="step5">⑤ Generating Report</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-section" id="resultsSection"></div>
+
+</div>
+
+<script>
+  // =============================================
+  // CHANGE THIS URL TO YOUR N8N WEBHOOK URL
+  // While testing: http://localhost:5678/webhook-test/upload-contract
+  // When active:   http://localhost:5678/webhook/upload-contract
+  // =============================================
+  const WEBHOOK_URL = 'http://localhost:5678/webhook-test/upload-contract';
+
+  let selectedFile = null;
+
+  // FILE HANDLING
+  function handleFile(input) {
+    selectedFile = input.files[0];
+    if (selectedFile) {
+      document.getElementById('fileNameDisplay').textContent = selectedFile.name + ' (' + (selectedFile.size / 1024).toFixed(1) + ' KB)';
+      document.getElementById('fileSelected').style.display = 'flex';
+      document.getElementById('analyzeBtn').disabled = false;
+      document.getElementById('errorBox').style.display = 'none';
+    }
+  }
+
+  // DRAG AND DROP
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      selectedFile = file;
+      document.getElementById('fileNameDisplay').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+      document.getElementById('fileSelected').style.display = 'flex';
+      document.getElementById('analyzeBtn').disabled = false;
+    }
+  });
+
+  // PROGRESS
+  function setProgress(percent, activeStep) {
+    document.getElementById('progressFill').style.width = percent + '%';
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById('step' + i);
+      el.className = 'progress-step';
+      if (i < activeStep) el.classList.add('done');
+      if (i === activeStep) el.classList.add('active');
+    }
+  }
+
+  // MAIN ANALYZE FUNCTION
+  async function analyzeDocument() {
+    if (!selectedFile) return;
+
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('progressSection').style.display = 'block';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('errorBox').style.display = 'none';
+
+    setProgress(15, 1);
+
+    const formData = new FormData();
+    formData.append('data', selectedFile);
+
+    try {
+      setProgress(30, 2);
+      await delay(400);
+      setProgress(50, 3);
+      await delay(400);
+      setProgress(70, 4);
+
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        body: formData
+      });
+
+      setProgress(90, 5);
+
+      if (!response.ok) {
+        throw new Error('Server returned ' + response.status + ' — make sure n8n is running and workflow is active');
+      }
+
+      const data = await response.json();
+      setProgress(100, 5);
+
+      await delay(600);
+      document.getElementById('progressSection').style.display = 'none';
+      renderResults(data);
+
+    } catch (error) {
+      document.getElementById('progressSection').style.display = 'none';
+      const errBox = document.getElementById('errorBox');
+      errBox.style.display = 'block';
+      errBox.innerHTML = '⚠️ Error: ' + error.message + '<br><br>Common fixes:<br>• Make sure n8n is running (n8n start in terminal)<br>• Toggle workflow to Active in n8n<br>• Check CORS: run n8n with N8N_CORS_ALLOWED_ORIGINS=* n8n start';
+      document.getElementById('analyzeBtn').disabled = false;
+    }
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // RENDER RESULTS
+  function renderResults(data) {
+    const section = document.getElementById('resultsSection');
+    section.style.display = 'block';
+
+    // Parse executive summary
+    let summary = {};
+    try {
+      let rawSummary = data.executive_summary || '{}';
+      if (typeof rawSummary === 'string') {
+        rawSummary = rawSummary.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        summary = JSON.parse(rawSummary);
+      } else {
+        summary = rawSummary;
+      }
+    } catch(e) {
+      summary = {
+        overallVerdict: 'Analysis completed. Please review individual clauses below.',
+        overallRiskScore: 5,
+        topDangerousClauses: [],
+        negotiationPoints: [],
+        illegalClauses: [],
+        safeToSign: false
+      };
+    }
+
+    // Parse clauses
+    let clauses = [];
+    try {
+      if (typeof data.full_analysis === 'string') {
+        clauses = JSON.parse(data.full_analysis);
+      } else if (Array.isArray(data.full_analysis)) {
+        clauses = data.full_analysis;
+      }
+    } catch(e) { clauses = []; }
+
+    const score = summary.overallRiskScore || 5;
+    const riskLevel = score >= 7 ? 'high' : score >= 4 ? 'medium' : 'low';
+    const verdictClass = 'verdict-' + riskLevel;
+    const circleClass = 'risk-circle-' + riskLevel;
+    const numClass = 'risk-num-' + riskLevel;
+
+    let html = '';
+
+    // STATS ROW
+    const flaggedCount = clauses.filter(c => c.isFlagged).length;
+    html += `
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num">${clauses.length}</div>
+          <div class="stat-label">Clauses Analyzed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--red)">${flaggedCount}</div>
+          <div class="stat-label">Flagged Clauses</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:var(--${riskLevel === 'high' ? 'red' : riskLevel === 'medium' ? 'orange' : 'green'})">${score}/10</div>
+          <div class="stat-label">Risk Score</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" style="color:${summary.safeToSign ? 'var(--green)' : 'var(--red)'}">${summary.safeToSign ? 'YES' : 'NO'}</div>
+          <div class="stat-label">Safe to Sign</div>
+        </div>
+      </div>
+    `;
+
+    // VERDICT CARD
+    html += `
+      <div class="verdict-card ${verdictClass}">
+        <div class="verdict-left">
+          <h2>Overall Risk Assessment</h2>
+          <p>${summary.overallVerdict || 'Review complete.'}</p>
+          <span class="verdict-sign ${summary.safeToSign ? 'sign-yes' : 'sign-no'}">
+            ${summary.safeToSign ? '✅ Generally safe to sign with minor revisions' : '🚫 Do NOT sign without demanding changes'}
+          </span>
+        </div>
+        <div class="risk-circle ${circleClass}">
+          <div class="risk-num ${numClass}">${score}</div>
+          <div class="risk-label">/ 10</div>
+        </div>
+      </div>
+    `;
+
+    // SUMMARY GRID
+    const dangers = summary.topDangerousClauses || [];
+    const negotiations = summary.negotiationPoints || [];
+    if (dangers.length > 0 || negotiations.length > 0) {
+      html += `<div class="summary-grid">`;
+      if (dangers.length > 0) {
+        html += `
+          <div class="summary-card">
+            <h3 class="danger">🚨 Top Dangerous Clauses</h3>
+            ${dangers.map(d => `<div class="summary-point">${d}</div>`).join('')}
+          </div>
+        `;
+      }
+      if (negotiations.length > 0) {
+        html += `
+          <div class="summary-card">
+            <h3 class="negotiate">💬 Demand These Changes Before Signing</h3>
+            ${negotiations.map(n => `<div class="summary-point">${n}</div>`).join('')}
+          </div>
+        `;
+      }
+      html += `</div>`;
+    }
+
+    // ILLEGAL CLAUSES WARNING
+    const illegal = summary.illegalClauses || [];
+    if (illegal.length > 0) {
+      html += `
+        <div class="summary-card" style="margin-bottom:20px; border-color:rgba(255,68,85,0.3); background:#1a0a0c;">
+          <h3 class="illegal">🚫 Potentially Illegal Under Indian Law</h3>
+          ${illegal.map(i => `<div class="summary-point" style="color:var(--red)">${i}</div>`).join('')}
+        </div>
+      `;
+    }
+
+    // CLAUSE BY CLAUSE
+    if (clauses.length > 0) {
+      html += `<div class="clauses-header">CLAUSE-BY-CLAUSE BREAKDOWN — ${clauses.length} CLAUSES</div>`;
+
+      clauses.forEach((clause, idx) => {
+        const s = clause.riskScore || 0;
+        const scoreClass = s >= 7 ? 'score-high' : s >= 4 ? 'score-medium' : 'score-low';
+        const cardClass = clause.isFlagged ? 'flagged' : 'safe';
+
+        html += `
+          <div class="clause-card ${cardClass}">
+            <div class="clause-top">
+              <div class="clause-type">${clause.clauseType || 'Clause ' + (idx + 1)}</div>
+              <div class="score-pill ${scoreClass}">Risk ${s}/10</div>
+            </div>
+        `;
+
+        if (clause.flagReasons && clause.flagReasons.length > 0) {
+          html += `<div class="flag-tags">`;
+          clause.flagReasons.forEach(r => {
+            html += `<span class="flag-tag">⚠ ${r}</span>`;
+          });
+          html += `</div>`;
+        }
+
+        if (clause.plainEnglishExplanation) {
+          html += `
+            <div class="section-label">What This Means For You</div>
+            <div class="plain-english">${clause.plainEnglishExplanation}</div>
+          `;
+        }
+
+        if (clause.legalCitations && clause.legalCitations.length > 0) {
+          html += `<div class="section-label">Legal Citations</div>`;
+          clause.legalCitations.forEach(c => {
+            html += `<span class="citation">📚 ${c}</span>`;
+          });
+        }
+
+        if (clause.redlinedEdit) {
+          html += `
+            <div class="section-label">Suggested Fair Rewrite</div>
+            <div class="redline">${clause.redlinedEdit}</div>
+          `;
+        }
+
+        html += `</div>`;
+      });
+    }
+
+    section.innerHTML = html;
+    section.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+</script>
+
+</body>
+</html>
