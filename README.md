@@ -58,7 +58,6 @@ User uploads document (PDF/TXT) via index.html
 | **n8n** | Workflow automation engine — connects all the nodes |
 | **Groq AI** | Legal intelligence — llama-3.3-70b-versatile model |
 | **HTML / CSS / JS** | Frontend interface — no framework needed |
-| **Netlify** | Frontend hosting |
 | **ngrok** | Makes n8n webhook accessible from internet |
 
 ---
