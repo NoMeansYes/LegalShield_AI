@@ -6,7 +6,7 @@
 ---
 
 ## 🎥 Demo Video
-[![LegalShield AI Demo](https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/iT51WL8LzjI))
+[![LegalShield AI Demo](https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)](https://youtu.be/iT51WL8LzjI)
 
 ---
 
