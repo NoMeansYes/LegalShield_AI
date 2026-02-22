@@ -1,0 +1,298 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload-contract",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        64,
+        48
+      ],
+      "id": "e212553f-9267-43ff-b4ee-3bc7dde4d622",
+      "name": "Webhook",
+      "webhookId": "adae9aa4-3fd5-4405-b0dd-63c5990655c7"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        48
+      ],
+      "id": "2d5d48ec-873b-4282-9564-665289e06550",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an Indian legal expert. Respond with ONLY a raw JSON object, no markdown, no backticks, no extra text. Required fields: clauseType (string), riskScore (integer 1-10, never default to 5, score based on actual risk), isFlagged (boolean), flagReasons (array), legalCitations (array), redlinedEdit (string), plainEnglishExplanation (string)\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze this contract clause: {{ $json.clauseText }}\"\n    }\n  ],\n  \"max_tokens\": 1000,\n  \"temperature\": 0.3\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        944,
+        48
+      ],
+      "id": "4dd8ef9f-b255-411f-adef-f81a7bab0993",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "7SolhJC8deGBvBgd",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = $input.first().json.text || \"\";\n\n// Split by numbered patterns like \"1.\", \"2.\", \"Clause 1\", \"Section 1\"\nlet clauses = rawText.split(/\\n(?=\\d+[\\.\\)]\\s|Clause\\s+\\d+|CLAUSE\\s+\\d+|Section\\s+\\d+|SECTION\\s+\\d+)/i);\n\n// If that gives only 1 item, try splitting by newline + capital heading\nif (clauses.length <= 1) {\n  clauses = rawText.split(/\\n{2,}(?=[A-Z])/);\n}\n\n// If still only 1 item, split by double newlines\nif (clauses.length <= 1) {\n  clauses = rawText.split(/\\n{2,}/);\n}\n\n// Clean and filter\nclauses = clauses\n  .map(c => c.trim())\n  .filter(c => c.length > 30);\n\nreturn clauses.map((clause, index) => ({\n  json: {\n    clauseIndex: index + 1,\n    clauseText: clause,\n    fullDocument: rawText\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        48
+      ],
+      "id": "09b9d8e8-4532-4987-8c88-754d9806197b",
+      "name": "split to clauses"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  \n  let content = item.json.choices[0].message.content || '';\n  \n  let parsed;\n  \n  try {\n    // Extract content between first { and last }\n    const start = content.indexOf('{');\n    const end = content.lastIndexOf('}');\n    const jsonString = content.substring(start, end + 1);\n    parsed = JSON.parse(jsonString);\n  } catch(e) {\n    parsed = {\n      clauseType: \"Parse Error\",\n      riskScore: 5,\n      isFlagged: false,\n      flagReasons: [],\n      legalCitations: [],\n      redlinedEdit: \"\",\n      plainEnglishExplanation: \"Could not parse: \" + content.substring(0, 100)\n    };\n  }\n\n  items.push({\n    json: {\n      ...parsed,\n      clauseIndex: item.json.clauseIndex || 0\n    }\n  });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        48
+      ],
+      "id": "4fb3e17f-8088-4fba-9cea-defe30bb80d2",
+      "name": "Parse grok response"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        48
+      ],
+      "id": "367727b5-86d4-480d-a45b-2c4d3703216d",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a senior Indian legal consultant giving a final verdict on a contract. Return ONLY valid JSON. Required JSON fields: overallVerdict (string), overallRiskScore (number 1-10), topDangerousClauses (array of strings), negotiationPoints (array of strings), illegalClauses (array of strings), safeToSign (boolean).\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ 'Here are all analyzed clauses from this contract: ' + JSON.stringify($json.data) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1504,
+        48
+      ],
+      "id": "78563a51-aa53-4f42-b3ed-01d8afb5b2cd",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"clauses_analyzed\": 1,\n  \"flagged_clauses\": 1,\n  \"executive_summary\": {\"overallVerdict\":\"The contract is mostly in favor of the client but has some clauses that need renegotiation.\",\"overallRiskScore\":6,\"topDangerousClauses\":[\"Clause 7: Liability limitation\",\"Clause 12: Dispute resolution\",\"Clause 15: Termination\"],\"negotiationPoints\":[\"Request for a more comprehensive indemnification clause\",\"Propose an alternative dispute resolution mechanism\",\"Seek removal of the termination clause or renegotiate its terms\"],\"illegalClauses\":[\"Clause 3: Unauthorized use of personal data\"],\"safeToSign\":false},\n  \"full_analysis\": [{\"clauseType\":\"Indemnification\",\"riskScore\":8,\"isFlagged\":true,\"flagReasons\":[\"Unclear scope of indemnification\",\"No cap on indemnification amount\"],\"legalCitations\":[\"Indian Contract Act, 1872, Section 124\",\"Consumer Protection Act, 2019, Section 2(31)\"],\"redlinedEdit\":\"The parties agree to indemnify and hold harmless each other, except to the extent that such losses are caused by the gross negligence or willful misconduct of the other party, with a cap of Rs. 10 lakhs.\",\"plainEnglishExplanation\":\"This clause means that one party will compensate the other for any losses or damages, but only if the losses are not caused by the other party's serious negligence or intentional wrongdoing, and the compensation will be limited to a maximum of Rs. 10 lakhs.\",\"clauseIndex\":0}]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1936,
+        48
+      ],
+      "id": "be94e257-68ca-46b7-947c-e9c6f070db72",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const clause = ($json.clauseText || '').toLowerCase();\n\nconst legalDB = [\n  { topic: 'restraint_of_trade', law: 'Indian Contract Act Section 27', text: 'Agreements in restraint of trade are void except reasonable restrictions.' },\n  { topic: 'penalty', law: 'Indian Contract Act Section 74', text: 'Penalty clauses must be reasonable compensation, not punishment.' },\n  { topic: 'termination', law: 'General Contract Principles', text: 'Unilateral termination without notice may be legally risky and unfair.' },\n  { topic: 'liability', law: 'Contract Act Section 23', text: 'Unreasonable or unconscionable terms may be challenged in court.' }\n];\n\nconst matches = legalDB.filter(entry => {\n  switch (entry.topic) {\n    case 'termination':\n      return /\\b(terminate|termination|terminating)\\b/.test(clause);\n    case 'penalty':\n      return /\\b(penalty|penalties|deduct|deduction)\\b/.test(clause);\n    case 'restraint_of_trade':\n      return /\\b(non-compete|restraint|restrictive covenant)\\b/.test(clause);\n    case 'liability':\n      return /\\b(liability|damages|indemnify|indemnification)\\b/.test(clause);\n    default:\n      return false;\n  }\n});\n\n// Return a single item object (not wrapped in an array)\nreturn {\n  json: {\n    ...$json,\n    retrievedLaws: matches\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        48
+      ],
+      "id": "6cd7c50e-e3c2-45d2-b2ac-ab35e96d5af0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the overall summary from HTTP Request1\nconst overallResponse = $input.all()[0].json;\nlet executiveSummary = {};\n\n// The overall summary is inside choices[0].message.content (from Grok)\nif (overallResponse.choices && overallResponse.choices[0]) {\n  const content = overallResponse.choices[0].message.content;\n  try {\n    // Extract JSON from the content (it may have backticks or extra text)\n    const start = content.indexOf('{');\n    const end = content.lastIndexOf('}');\n    if (start !== -1 && end !== -1) {\n      executiveSummary = JSON.parse(content.substring(start, end + 1));\n    }\n  } catch (e) {\n    executiveSummary = {\n      overallVerdict: 'Could not parse summary',\n      overallRiskScore: 0,\n      topDangerousClauses: [],\n      negotiationPoints: [],\n      illegalClauses: [],\n      safeToSign: false\n    };\n  }\n}\n\n// Get the aggregated clause data from the Aggregate node\n// Assuming the Aggregate node outputs { data: [...] }\nconst aggregateData = $('Aggregate').first().json.data || [];\n\nreturn {\n  json: {\n    success: true,\n    clauses_analyzed: aggregateData.length,\n    flagged_clauses: aggregateData.filter(c => c.isFlagged === true || c.isFlagged === 'true').length,\n    executive_summary: executiveSummary,\n    full_analysis: aggregateData\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        48
+      ],
+      "id": "c5aa5ec7-a229-4465-80e2-d38f7aa5b242",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "split to clauses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Parse grok response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split to clauses": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse grok response": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c0f7a86c-0d5c-460b-80f2-0431f82c5947",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d0d0a6f31c662c4f7a88e9193709d7cb901bf88ca049ff13d7865453467be429"
+  },
+  "id": "f9ZiqWcGwcmiirOG",
+  "tags": []
+}
