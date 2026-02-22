@@ -5,6 +5,13 @@
 
 ---
 
+## 🎥 Demo Video
+[![LegalShield AI Demo](https://img.shields.io/badge/Watch%20Demo-YouTube-red?style=for-the-badge&logo=youtube)]([https://www.youtube.com/watch?v=YOURVIDEOID](https://youtu.be/iT51WL8LzjI))
+
+> Replace the link above with your actual demo video URL after recording it.
+
+---
+
 ## 📌 Problem Statement
 Most Indians sign rental agreements, employment contracts, and loan documents without understanding the legal implications. Professional legal review costs ₹5,000–₹20,000 per document — unaffordable for most people.
 
